@@ -1,8 +1,8 @@
 #!/bin/bash
 
-echo "=== Laravel Setup on Render (Docker) ==="
+echo "=== Laravel PostgreSQL Setup on Render ==="
 
-# 1. Ensure directories exist (safety check)
+# 1. Create necessary directories
 mkdir -p storage/framework/{sessions,views,cache}
 mkdir -p bootstrap/cache
 
@@ -10,30 +10,44 @@ mkdir -p bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
-# 3. Clear caches
-echo "Clearing caches..."
-php artisan config:clear || true
-php artisan cache:clear || true
-php artisan view:clear || true
+# 3. CRITICAL: Clear ALL caches (fixes the "mysql driver" issue)
+echo "Clearing all Laravel caches..."
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
+php artisan event:clear
 
-# 4. Create storage link
-echo "Creating storage link..."
+# 4. Delete cached config files
+rm -f bootstrap/cache/*.php 2>/dev/null || true
+
+# 5. Test database connection
+echo "Testing PostgreSQL connection..."
+timeout 30 bash -c 'until php artisan tinker --execute="try { DB::connection()->getPdo(); echo \"✓ Database connected\n\"; } catch (\Exception \$e) { echo \"✗ Database error: \" . \$e->getMessage() . \"\n\"; exit(1); }"; do sleep 2; done'
+
+# 6. Create storage link
 php artisan storage:link || true
 
-# 5. Wait for PostgreSQL (Render specific - database might need time)
-echo "Waiting for PostgreSQL to be ready..."
-sleep 5
-
-# 6. Run migrations
+# 7. Run migrations with retry logic
 echo "Running migrations..."
-php artisan migrate --force --no-interaction || echo "Migrations may have failed, continuing..."
+MAX_RETRIES=3
+for i in $(seq 1 $MAX_RETRIES); do
+    echo "Attempt $i of $MAX_RETRIES..."
+    php artisan migrate --force --no-interaction
+    if [ $? -eq 0 ]; then
+        echo "✓ Migrations successful"
+        break
+    else
+        echo "✗ Migration failed, retrying in 5 seconds..."
+        sleep 5
+    fi
+done
 
-
-# 7. Cache for production file
+# 8. Cache for production (AFTER successful setup)
 echo "Caching for production..."
-php artisan config:cache || true
-php artisan route:cache || true
-php artisan view:cache || true
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 
 echo "=== Starting Apache ==="
 exec apache2-foreground

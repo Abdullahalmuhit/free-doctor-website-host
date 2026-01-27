@@ -54,5 +54,12 @@ RUN mkdir -p storage/framework/{sessions,views,cache} bootstrap/cache \
 COPY entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# 10. Use entrypoint script
+# 11. Copy and set entrypoint
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# 12. Install wait-for-it for better database connection handling
+ADD https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh /usr/local/bin/wait-for-it
+RUN chmod +x /usr/local/bin/wait-for-it
+
 ENTRYPOINT ["entrypoint.sh"]

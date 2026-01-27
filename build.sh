@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Exit on error
 set -o errexit
 
-composer install --no-dev --optimize-autoloader
+echo "=== Installing system dependencies ==="
+apt-get update
+apt-get install -y php-pgsql
 
-# Install and build frontend assets (Vite)
-npm install
-npm run build
+echo "=== Installing PHP dependencies ==="
+composer install --no-dev --optimize-autoloader --no-interaction
 
-# Run database migrations (optional: only if your DB is ready)
-# php artisan migrate --force
+echo "=== Building frontend ==="
+npm install --silent
+npm run build --silent
+
+echo "=== Build completed ==="

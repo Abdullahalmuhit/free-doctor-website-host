@@ -1,6 +1,6 @@
 FROM php:8.2-apache
 
-# 1. Install system dependencies, including PostgreSQL dev libraries
+# 1. Install system dependencies
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libonig-dev \
@@ -10,7 +10,9 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     gawk \
     nano \
-    less
+    less \
+    nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
 
 # 2. Install PHP extensions
 RUN docker-php-ext-install \
@@ -32,14 +34,25 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.
 # 4. Copy project
 COPY . /var/www/html
 
-# 5. Composer
+# 5. Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-RUN composer install --no-dev --optimize-autoloader
 
-# 6. Permissions
-RUN mkdir -p storage/framework/{sessions,views,cache/data} storage/logs bootstrap/cache \
+# 6. Set working directory
+WORKDIR /var/www/html
+
+# 7. Install dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN npm install
+RUN npm run build
+
+# 8. Set proper permissions (create directories but don't run Laravel commands yet)
+RUN mkdir -p storage/framework/{sessions,views,cache} bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# 7. Start Apache
-CMD apache2-foreground
+# 9. Create entrypoint script
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# 10. Use entrypoint script
+ENTRYPOINT ["entrypoint.sh"]

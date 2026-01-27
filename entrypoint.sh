@@ -1,55 +1,38 @@
 #!/bin/bash
 
-echo "=== Laravel PostgreSQL Setup on Render ==="
+echo "=== Laravel Setup on Render (Docker) ==="
 
-# 1. Create necessary directories
-echo "Creating cache directories..."
+# 1. Ensure directories exist (safety check)
 mkdir -p storage/framework/{sessions,views,cache}
 mkdir -p bootstrap/cache
 
 # 2. Set permissions
-chmod -R 775 storage
-chmod -R 775 bootstrap/cache
+chown -R www-data:www-data storage bootstrap/cache
+chmod -R 775 storage bootstrap/cache
 
 # 3. Clear caches
-echo "Clearing old caches..."
-php artisan config:clear
-php artisan cache:clear
-php artisan view:clear
+echo "Clearing caches..."
+php artisan config:clear || true
+php artisan cache:clear || true
+php artisan view:clear || true
 
 # 4. Create storage link
-php artisan storage:link
+echo "Creating storage link..."
+php artisan storage:link || true
 
-# 5. Test database connection
-echo "Testing database connection..."
-php artisan db:show --json 2>/dev/null || echo "Database not connected yet"
+# 5. Wait for PostgreSQL (Render specific - database might need time)
+echo "Waiting for PostgreSQL to be ready..."
+sleep 5
 
-# 6. Run migrations WITH retry logic (PostgreSQL might take time to start)
+# 6. Run migrations
 echo "Running migrations..."
-MAX_RETRIES=5
-RETRY_COUNT=0
-
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    php artisan migrate --force --no-interaction
-    if [ $? -eq 0 ]; then
-        echo "Migrations completed successfully!"
-        break
-    else
-        RETRY_COUNT=$((RETRY_COUNT+1))
-        echo "Migration attempt $RETRY_COUNT failed. Retrying in 5 seconds..."
-        sleep 5
-    fi
-done
-
-if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-    echo "WARNING: Migrations failed after $MAX_RETRIES attempts. Continuing anyway..."
-fi
+php artisan migrate --force --no-interaction || echo "Migrations may have failed, continuing..."
 
 # 7. Cache for production
 echo "Caching for production..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan config:cache || true
+php artisan route:cache || true
+php artisan view:cache || true
 
 echo "=== Starting Apache ==="
 exec apache2-foreground

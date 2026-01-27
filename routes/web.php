@@ -108,13 +108,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::delete('trainings/{training}', [\App\Http\Controllers\Admin\AdminDoctorProfileController::class, 'destroyTraining'])->name('doctor-profile.trainings.destroy');
 
     // Admin gallery routes
-        Route::get('/gallery', [AdminGalleryController::class, 'index'])->name('gallery.index');
-        Route::get('/gallery/create', [AdminGalleryController::class, 'create'])->name('gallery.create');
-        Route::post('/gallery', [AdminGalleryController::class, 'store'])->name('gallery.store');
-        Route::get('/gallery/{gallery}/edit', [AdminGalleryController::class, 'edit'])->name('gallery.edit');
-        Route::put('/gallery/{gallery}', [AdminGalleryController::class, 'update'])->name('gallery.update');
-        Route::delete('/gallery/{gallery}', [AdminGalleryController::class, 'destroy'])->name('gallery.destroy');
-        Route::patch('/gallery/{gallery}/toggle-featured', [AdminGalleryController::class, 'toggleFeatured'])->name('gallery.toggleFeatured');
+    Route::get('/gallery', [AdminGalleryController::class, 'index'])->name('gallery.index');
+    Route::get('/gallery/create', [AdminGalleryController::class, 'create'])->name('gallery.create');
+    Route::post('/gallery', [AdminGalleryController::class, 'store'])->name('gallery.store');
+    Route::get('/gallery/{gallery}/edit', [AdminGalleryController::class, 'edit'])->name('gallery.edit');
+    Route::put('/gallery/{gallery}', [AdminGalleryController::class, 'update'])->name('gallery.update');
+    Route::delete('/gallery/{gallery}', [AdminGalleryController::class, 'destroy'])->name('gallery.destroy');
+    Route::patch('/gallery/{gallery}/toggle-featured', [AdminGalleryController::class, 'toggleFeatured'])->name('gallery.toggleFeatured');
 
     // Slider routes
 

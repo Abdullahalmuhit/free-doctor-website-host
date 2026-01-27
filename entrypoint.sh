@@ -28,7 +28,8 @@ sleep 5
 echo "Running migrations..."
 php artisan migrate --force --no-interaction || echo "Migrations may have failed, continuing..."
 
-# 7. Cache for production
+
+# 7. Cache for production file
 echo "Caching for production..."
 php artisan config:cache || true
 php artisan route:cache || true

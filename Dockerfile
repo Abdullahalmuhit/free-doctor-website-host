@@ -1,37 +1,42 @@
 FROM php:8.2-apache
 
-# 1. Install dependencies
+# Install dependencies
 RUN apt-get update && apt-get install -y \
     libpng-dev libonig-dev libxml2-dev \
     zip unzip git curl libzip-dev
 
-# 2. Install PHP Extensions
+# Install PHP extensions
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-# 3. Configure Apache
+# Configure Apache
 RUN a2enmod rewrite
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# 4. Copy code
+# Copy project files
 COPY . /var/www/html
 
-# 5. Install Composer
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN composer install --no-dev --optimize-autoloader
 
-# 6. Set Permissions & Folders
+# Fix permissions and create folders
 RUN mkdir -p /var/www/html/storage/framework/{sessions,views,cache/data} \
     && mkdir -p /var/www/html/storage/logs \
     && mkdir -p /var/www/html/bootstrap/cache \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 7. Prepare the script
-RUN chmod +x /var/www/html/render-build.sh
+# Create a startup script inside the container to avoid shell issues
+RUN echo '#!/bin/sh\n\
+php artisan config:cache\n\
+php artisan route:cache\n\
+php artisan view:cache\n\
+php artisan migrate --force\n\
+apache2-foreground' > /usr/local/bin/start-app.sh && chmod +x /usr/local/bin/start-app.sh
 
 EXPOSE 80
 
-# Use the script as the entrypoint
-ENTRYPOINT ["/var/www/html/render-build.sh"]
+# Execute the startup script
+ENTRYPOINT ["start-app.sh"]

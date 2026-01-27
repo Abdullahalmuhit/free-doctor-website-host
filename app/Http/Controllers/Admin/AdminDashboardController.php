@@ -9,6 +9,7 @@ use App\Models\Chamber;
 use App\Models\ResearchPaper;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class AdminDashboardController extends Controller
 {
@@ -33,9 +34,14 @@ class AdminDashboardController extends Controller
             ->get();
 
         // Monthly Appointment Chart Data
-        $monthlyAppointments = Appointment::selectRaw('DATE_FORMAT(appointment_date, "%Y-%m") as month, COUNT(*) as count')
+        $monthlyAppointments = Appointment::select([
+            DB::raw('EXTRACT(YEAR FROM appointment_date) as year'),
+            DB::raw('EXTRACT(MONTH FROM appointment_date) as month'),
+            DB::raw('COUNT(*) as count')
+        ])
             ->where('appointment_date', '>=', Carbon::now()->subMonths(6))
-            ->groupBy('month')
+            ->groupBy(['year', 'month'])
+            ->orderBy('year')
             ->orderBy('month')
             ->get();
 

@@ -36,18 +36,6 @@ php artisan view:clear\n\
 php artisan migrate --force || true\n\
 exec apache2-foreground' > /usr/local/bin/start-app.sh && chmod +x /usr/local/bin/start-app.sh
 
-# ... (rest of your Dockerfile above)
-
-# 7. Ensure the start-app script is there as a backup
-RUN echo '#!/bin/sh\n\
-php artisan config:clear\n\
-php artisan view:clear\n\
-php artisan migrate --force\n\
-exec apache2-foreground' > /usr/local/bin/start-app.sh && chmod +x /usr/local/bin/start-app.sh
-
-# 8. THE ONE-TIME RUN COMMAND
-# Note: No brackets [] here. This is "Shell Form" which handles && correctly.
-CMD php artisan migrate:fresh --seed --force && apache2-foreground
 
 EXPOSE 80
 ENTRYPOINT ["start-app.sh"]

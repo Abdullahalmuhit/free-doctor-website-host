@@ -1,11 +1,11 @@
 FROM php:8.2-apache
 
-# System deps
+# System dependencies
 RUN apt-get update && apt-get install -y \
     libpng-dev libonig-dev libxml2-dev \
     zip unzip git curl libzip-dev
 
-# PHP extensions (PostgreSQL, NOT MySQL)
+# PHP extensions (PostgreSQL only)
 RUN docker-php-ext-install mbstring exif pcntl bcmath gd zip \
     && docker-php-ext-install pdo_pgsql pgsql
 
@@ -22,10 +22,13 @@ COPY . /var/www/html
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN composer install --no-dev --optimize-autoloader
 
-# Permissions
+# Storage permissions
 RUN mkdir -p storage/framework/{sessions,views,cache/data} storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# Start Apache only
+# Clear caches at build time (safe)
+RUN php artisan config:clear && php artisan view:clear
+
+# Start Apache
 CMD apache2-foreground

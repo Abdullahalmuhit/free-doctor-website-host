@@ -22,8 +22,7 @@ RUN docker-php-ext-install \
     bcmath \
     gd \
     zip \
-    pdo_pgsql \
-    pgsql
+    pdo pdo_pgsql pgsql
 
 # 3. Apache Config
 RUN a2enmod rewrite
@@ -34,32 +33,35 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.
 # 4. Copy project
 COPY . /var/www/html
 
-# 5. Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# 6. Set working directory
+# 5. Set working directory
 WORKDIR /var/www/html
 
-# 7. Install dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
-RUN npm install
+# 6. Fix ownership BEFORE installing dependencies
+RUN chown -R www-data:www-data /var/www/html
+
+# 7. Install Composer as root, then switch user
+USER www-data
+
+# 8. Install dependencies as www-data (fixes permission issues)
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+# 9. Install npm dependencies
+RUN npm install --no-audit --no-fund
+
+# 10. Build assets
 RUN npm run build
 
-# 8. Set proper permissions (create directories but don't run Laravel commands yet)
+# 11. Switch back to root for final setup
+USER root
+
+# 12. Create entrypoint script
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# 13. Final permissions
 RUN mkdir -p storage/framework/{sessions,views,cache} bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
-
-# 9. Create entrypoint script
-COPY entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# 11. Copy and set entrypoint
-COPY entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# 12. Install wait-for-it for better database connection handling
-ADD https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh /usr/local/bin/wait-for-it
-RUN chmod +x /usr/local/bin/wait-for-it
 
 ENTRYPOINT ["entrypoint.sh"]

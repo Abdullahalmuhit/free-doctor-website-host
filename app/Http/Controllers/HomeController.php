@@ -34,7 +34,7 @@ class HomeController extends Controller
         // Get the main doctor profile
         $doctor = User::doctors()->first();
 
-        return view('frontend.home', compact('recentArticles', 'recentResearch', 'doctor', 'featuredGallery', 'sliders'));
+        return view('frontend.home2', compact('recentArticles', 'recentResearch', 'doctor', 'featuredGallery', 'sliders'));
     }
 
     public function about()
